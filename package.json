@@ -1,0 +1,13 @@
+{
+	"name": "tetris-matrix",
+	"main": "game.js",
+	"homepage": "https://eichhorn.dev/tetrismatrix.md",
+	"author": "Pfannkuchensack",
+	"license": "MIT",
+	"dependencies": {
+		"cli-color": "^1.4.0",
+		"gamepad": "^1.6.0",
+		"serialport": "^7.1.5",
+		"tetris-engine": "^1.2.18"
+	}
+}
