@@ -2,6 +2,7 @@
  * This Codebase is a mess :)
  * Most of the mess is from Alexander 'Pfannkuchensack' Eichhorn
  * Thanks for the great npm packages: tetris-engine, gamepad, serialport, cli-color
+ * In use Arduino Uno + 384 WS2812B. Communication wokrs over Serial. RPi/Laptop -> usb ->  Uno
  */
 
 let Engine = require('tetris-engine').Engine;
