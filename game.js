@@ -35,6 +35,10 @@ setInterval(gamepad.detectDevices, 500);
 // so if you want go fast down, press many times. @todo
 // Keys Values for USB Classic Nintendo Controller, need change for another Controller maybe
 
+var movedownint = false;
+var moveleftint = false;
+var moverightint = false;
+var heapcounter = 0;
 // Listen for move events on all gamepads
 gamepad.on("move", function (id, axis, value) {
 	/*console.log("move", {
@@ -42,12 +46,34 @@ gamepad.on("move", function (id, axis, value) {
 		axis: axis,
 		value: value,
 	});*/
-	if(axis == 1 && value == 1)
+	if(value != 1 && value != -1)
+	{
+		clearInterval(movedownint);
+		clearInterval(moverightint);
+		clearInterval(moveleftint);
+	}
+	else if(axis == 1 && value == 1)
+	{
+		game.moveDown();
+		movedownint = setInterval(function() {	game.moveDown(); }, 100);
+	}
+	else if(axis == 0 && value == -1)
+	{
+		game.moveLeft();
+		moveleftint = setInterval(function() {	game.moveLeft(); }, 100);
+	}
+	else if(axis == 0 && value == 1)
+	{
+		game.moveRight();
+		moverightint = setInterval(function() {	game.moveRight(); }, 100);
+	}
+	/*if(axis == 1 && value == 1)
 		game.moveDown();
 	else if(axis == 0 && value == -1)
 		game.moveLeft(); 
 	else if(axis == 0 && value == 1)
 		game.moveRight();
+	*/
 });
 
 // Listen for button up events on all gamepads
@@ -79,6 +105,7 @@ let change = false
 // Had long time search for this solution!
 parser.on('data', line => {
 	change = false;
+	//console.log(line);
 });
 
 // https://github.com/petelinmn/tetris-engine
@@ -92,6 +119,7 @@ let renderFunc = (gameState) => {
 	let buf = [];
 	let tmp = [];
 	let k = 0;
+	let hc = 0;
 	gameState.body.forEach(function(row,x) {
 		row.forEach(function(col,y) {
 			// Terminal
@@ -114,6 +142,7 @@ let renderFunc = (gameState) => {
 			{
 				let lnr  = matrix_mapping(x,y);
 				tmp[lnr] = get_color_to_shape(col.cssClasses[3]);
+				hc++;
 			}
 			else
 			{
@@ -130,7 +159,15 @@ let renderFunc = (gameState) => {
 		buf[k+2] = werte[2];
 		k = k + 3;
 	});
+	// Block to Heap
+	if(hc > heapcounter)
+	{
+		clearInterval(movedownint);
+		clearInterval(moverightint);
+		clearInterval(moveleftint);
+	}
 	writeAndDrain(Buffer.from(buf), changer);
+	heapcounter = hc;
 	if(debug) {console.timeEnd("gameState");}
 };
 
@@ -163,6 +200,8 @@ function get_color_to_shape(shape)
 			return [0,255,255];
 		case 'JShape':
 			return [255,140,0];
+		default:
+			return [155,155,155];
 	}
 }
 // @todo: Terminal Color dont work cause of change from one Value of a Color to three
@@ -218,17 +257,51 @@ function matrix_mapping(x, y)
 		];
 		return matrix_array[x][y];
 }
+
+let additionalShapes = {
+	IShape: [
+		[0, 1, 1, 0, 0],
+		[0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0],
+		[0, 0, 1, 1, 0],
+		[0, 0, 0, 0, 0],
+	 ],
+	 SShape: [
+		[1, 1, 1, 1, 1],
+		[0, 1, 1, 1, 0],
+		[0, 1, 0, 1, 0],
+		[0, 1, 0, 1, 0],
+		[0, 1, 0, 1, 0],
+	 ],
+	 OShape: [
+		[0, 0, 0, 0, 1],
+		[0, 0, 0, 0, 1],
+		[1, 1, 1, 1, 1],
+		[0, 0, 0, 0, 0],
+		[0, 0, 0, 0, 0],
+	 ],
+	 TShape: [
+		[0, 1, 0, 0, 0],
+		[0, 1, 0, 0, 0],
+		[0, 1, 1, 0, 0],
+		[1, 1, 1, 1, 1],
+		[0, 1, 0, 1, 0],
+	 ]
+ };
 // Start the Engine
 let game = new Engine(
 	areaHeight, 
 	areaWidth, 
-	renderFunc
+	renderFunc,
+	null,
+	//additionalShapes
 );
 
-game.start();
+
+setTimeout(() => {game.start();},5000);
 
 // Level 1: 1 Sec
-let firstLevelInterval = 1000;
+let firstLevelInterval = 150;
 setInterval(() => {
 	game.moveDown();
 }, firstLevelInterval);
