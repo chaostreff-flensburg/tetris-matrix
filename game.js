@@ -10,8 +10,8 @@ let gamepad = require("gamepad");
 const SerialPort = require('serialport')
 const Readline = require('@serialport/parser-readline')
 //const port = new SerialPort('/dev/ttyACM1', { baudRate: 1000000}); // BaudRate need to the same!
-const port = new SerialPort('/dev/ttyUSB0', { baudRate: 1000000}); // BaudRate need to the same!
-const debug = false; // Want Timings for Debug?
+const port = new SerialPort('/dev/ttyUSB15', { baudRate: 1000000}); // BaudRate need to the same!
+const debug = true; // Want Timings for Debug?
 const co = false; // Want Console Tetris output ?
 // Game Field x y
 const areaHeight = 16;
@@ -38,6 +38,10 @@ setInterval(gamepad.detectDevices, 500);
 var movedownint = false;
 var moveleftint = false;
 var moverightint = false;
+var gamelevel = false;
+var isPaused = false;
+// Level 1: 1 Sec
+var firstLevelInterval = 1000;
 var heapcounter = 0;
 // Listen for move events on all gamepads
 gamepad.on("move", function (id, axis, value) {
@@ -67,6 +71,10 @@ gamepad.on("move", function (id, axis, value) {
 		game.moveRight();
 		moverightint = setInterval(function() {	game.moveRight(); }, 100);
 	}
+	/*else if(axis == 1 && value == -1)
+	{
+		game.moveUp()
+	}*/
 	/*if(axis == 1 && value == 1)
 		game.moveDown();
 	else if(axis == 0 && value == -1)
@@ -92,9 +100,32 @@ gamepad.on("down", function (id, num) {
 	else if(num == 0)
 		game.rotateBack();
 	else if(num == 9)
-		game.start();
+	{
+		if(isPaused)
+		{
+			game.start();
+			isPaused = false;
+		}
+		else
+		{
+			game.pause();
+			isPaused = true;
+		}
+		
+	}
 	else if(num == 8)
-		game.pause();
+	{
+		setTimeout(function () {
+			process.on("exit", function () {
+				require("child_process").spawn(process.argv.shift(), process.argv, {
+					cwd: process.cwd(),
+					detached : true,
+					stdio: "inherit"
+				});
+			});
+			process.exit();
+		}, 5000);
+	}
 });
 
 function done() {}
@@ -104,9 +135,10 @@ let change = false
 // Das hier war die Lösung für das Problem vom Aufhängen vom Arduino
 // Had long time search for this solution!
 parser.on('data', line => {
+	console.log(line);
 	change = false;
-	//console.log(line);
 });
+
 
 // https://github.com/petelinmn/tetris-engine
 let renderFunc = (gameState) => {
@@ -115,7 +147,7 @@ let renderFunc = (gameState) => {
 	if(change)
 		return;
 	change = true;
-	if(co) { let colpaint = ''; }
+	if(co) { var colpaint = ''; }
 	let buf = [];
 	let tmp = [];
 	let k = 0;
@@ -126,11 +158,11 @@ let renderFunc = (gameState) => {
 			if(co) 
 			{ 
 				if(col.val == 1)
-					colpaint = colpaint + '' +  color_for_terminal(get_color_to_shape(col.cssClasses[2]), '1');
+					colpaint = colpaint + '' +  color_for_terminal(get_color_to_shape(col.cssClasses[2]), 'X');
 				else if(col.val == 2)
-					colpaint = colpaint + '' +  color_for_terminal(get_color_to_shape(col.cssClasses[3]), '2');
+					colpaint = colpaint + '' +  color_for_terminal(get_color_to_shape(col.cssClasses[3]), 'X');
 				else
-					colpaint = colpaint + '' +  col.val;
+					colpaint = colpaint + '' +  ' ';
 			}
 			// Game
 			if(col.val == 1)
@@ -166,8 +198,16 @@ let renderFunc = (gameState) => {
 		clearInterval(moverightint);
 		clearInterval(moveleftint);
 	}
+	console.log(buf.length);
 	writeAndDrain(Buffer.from(buf), changer);
 	heapcounter = hc;
+	/*if(gameState.statistic.countLinesReduced != 0 && gameState.statistic.countLinesReduced % 2 == 0)
+	{
+		console.log(gameState.statistic);
+		let mi = gameState.statistic.countLinesReduced / 2;
+		clearInterval(gamelevel);
+		gamelevel = setInterval(function() { game.moveDown(); }, 1000 - (mi * 100));
+	}*/
 	if(debug) {console.timeEnd("gameState");}
 };
 
@@ -185,6 +225,7 @@ function changer()
 // Color Mapping for the LED // Orange dont work really well :(
 function get_color_to_shape(shape)
 {
+	//return [155,155,155]; // Alles eine Farbe
 	switch(shape) {
 		case 'IShape':
 			return [0,0,255];
@@ -199,7 +240,7 @@ function get_color_to_shape(shape)
 		case 'SShape':
 			return [0,255,255];
 		case 'JShape':
-			return [255,140,0];
+			return [255,255,255];
 		default:
 			return [155,155,155];
 	}
@@ -208,7 +249,7 @@ function get_color_to_shape(shape)
 // Terminal Color Thema
 function color_for_terminal(color, val)
 {
-	return clc.green(val);
+	return val; //clc.green(val);
 	switch(color) {
 		case 0:
 			return clc.blue(val);
@@ -260,48 +301,64 @@ function matrix_mapping(x, y)
 
 let additionalShapes = {
 	IShape: [
-		[0, 1, 1, 0, 0],
-		[0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0],
-		[0, 0, 1, 1, 0],
-		[0, 0, 0, 0, 0],
-	 ],
-	 SShape: [
-		[1, 1, 1, 1, 1],
-		[0, 1, 1, 1, 0],
 		[0, 1, 0, 1, 0],
-		[0, 1, 0, 1, 0],
-		[0, 1, 0, 1, 0],
-	 ],
-	 OShape: [
-		[0, 0, 0, 0, 1],
-		[0, 0, 0, 0, 1],
-		[1, 1, 1, 1, 1],
 		[0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0],
-	 ],
-	 TShape: [
-		[0, 1, 0, 0, 0],
-		[0, 1, 0, 0, 0],
-		[0, 1, 1, 0, 0],
-		[1, 1, 1, 1, 1],
 		[0, 1, 0, 1, 0],
-	 ]
- };
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+	],
+	SShape: [
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+	],
+	OShape: [
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+	],
+	TShape: [
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+	],
+	JShape: [
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+	],
+	LShape: [
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+	],
+	ZShape: [
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+		[0, 0, 0, 0, 0],
+		[0, 1, 0, 1, 0],
+	]
+};
 // Start the Engine
 let game = new Engine(
 	areaHeight, 
 	areaWidth, 
 	renderFunc,
 	null,
-	//additionalShapes
+	additionalShapes
 );
 
-
-setTimeout(() => {game.start();},5000);
-
-// Level 1: 1 Sec
-let firstLevelInterval = 150;
-setInterval(() => {
-	game.moveDown();
-}, firstLevelInterval);
+setTimeout(() => {game.start();
+	gamelevel = setInterval(function() { game.moveDown(); }, firstLevelInterval);
+},3000);
