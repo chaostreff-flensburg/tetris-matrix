@@ -5,44 +5,28 @@
  * In use Arduino Uno + 384 WS2812B. Communication wokrs over Serial. RPi/Laptop -> usb ->  Uno
  */
 
-const SerialPort = require('serialport')
-const Readline = require('@serialport/parser-readline')
-//const port = new SerialPort('/dev/ttyACM1', { baudRate: 1000000}); // BaudRate need to the same!
-const port = new SerialPort('/dev/ttyUSB16', { baudRate: 1000000}); // BaudRate need to the same!
-const debug = true; // Want Timings for Debug?
+const SerialPort = require('serialport');
+const Readline = require('@serialport/parser-readline');
+const port = new SerialPort('/dev/ttyUSB0', { baudRate: 1000000}); // BaudRate need to the same!
+
 // Game Field x y
 const areaHeight = 16;
 const areaWidth = 24;
 
-const parser = new Readline()
-port.pipe(parser)
+const parser = new Readline();
+port.pipe(parser);
 
-function done() {}
-
-// Change is ready?
-var change = false
-// Das hier war die Lösung für das Problem vom Aufhängen vom Arduino
-// Had long time search for this solution!
 parser.on('data', line => {
 	console.log(line);
-	change = false;
+});
+
+port.on('error', function(err) {
+    console.log('Error: ', err.message)
 });
 
 var buf = [];
 var tmp = [];
 var k = 0;
-
-function writeAndDrain (data, callback) {
-	if(debug) {console.time("SerialWrite");}
-	port.write(data);
-	port.drain(callback);
-}
-
-function changer()
-{
-	change = false;
-	if(debug) {console.timeEnd("SerialWrite");}
-}
 
 // Mapping your LED Matrix to x and y of the GameField
 function matrix_mapping(x, y)
@@ -76,42 +60,32 @@ function matrix_mapping(x, y)
 		return matrix_array[x][y];
 }
 
-setTimeout(start, 2000);
+setTimeout(start, 1000);
 
 function start()
 {
-	while(true) {
-		if(debug) {console.time("Loop");}
-		if(change)
-			continue;
-		change = true;
-		
-
+	setInterval(function ()
+    {
 		for(let y = 0; y < areaHeight; y++) {
 			for(let x = 0; x < areaWidth; x++) {
 				let lnr  = matrix_mapping(x,y);
 				tmp[lnr] = [Math.random()*255|0,Math.random()*255|0,Math.random()*255|0];
 			}
 		}
-		
-		tmp.forEach(function(werte, nr) {
+
+		tmp.forEach(function(werte) {
 			buf[k] = werte[0];
 			buf[k+1] = werte[1];
 			buf[k+2] = werte[2];
 			k = k + 3;
 		});
-		
-		console.log(buf.length);
+
 		// Block to Heap
-		writeAndDrain(Buffer.from(buf), changer);
+		port.write(Buffer.from(buf));
+
 		buf = [];
 		tmp = [];
 		k = 0;
-		
-		if(debug) {console.timeEnd("Loop");}
-		//change = false;
-		setTimeout(function () {
-			change = false;
-		}, 200);
-	}
+
+	}, 1000);
 }
