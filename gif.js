@@ -7,7 +7,7 @@
 
 const SerialPort = require('serialport');
 const Readline = require('@serialport/parser-readline');
-const port = new SerialPort('/dev/ttyUSB2', { baudRate: 1000000}); // BaudRate need to the same!
+const port = new SerialPort('/dev/ttyUSB4', { baudRate: 1000000}); // BaudRate need to the same!
 const getPixels = require('get-pixels');
 const fs = require('fs');
 
@@ -72,8 +72,8 @@ setTimeout(start, 1000);
 
 function start()
 {
-	fs.readdirSync("./gif1").forEach(file => {
-		gifs.push("./gif1/" + file);
+	fs.readdirSync("./gif4").forEach(file => {
+		gifs.push("./gif4/" + file);
 	});
 	setInterval(function ()
     {
@@ -119,5 +119,5 @@ function start()
 		k = 0;
 		g++;
 
-	}, 250);
+	}, 150);
 }
