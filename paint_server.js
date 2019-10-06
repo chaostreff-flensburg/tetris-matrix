@@ -1,3 +1,12 @@
+/*
+ * This is the a simple websocket server to allow clients to send ArrayBuffers the pixel matrix directly.
+ * A sample client can be found in 'client.js' though the message is only sent as string.
+ * Feel free to implement your own client.
+ * Currently Server.on('message') expects a message to be an ArrayBuffer which holds integer values (colors r, g and b separately) for each pixel.
+ * The ArrayBuffer length is 384 (number of pixels) * 3 (color channels r, g, b) = 1152;
+ * This was build by Alexander Eichhorn and Aaron Schroeder.
+ */
+
 const SerialPort = require('serialport');
 const Readline = require('@serialport/parser-readline');
 const WebSocket = require('ws');
