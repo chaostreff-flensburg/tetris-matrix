@@ -1,20 +1,29 @@
-const app = require('express')();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http);
 const SerialPort = require('serialport');
 const Readline = require('@serialport/parser-readline');
+const WebSocket = require('ws');
 const serialPort = new SerialPort('/dev/ttyUSB0', {baudRate: 1000000}); // BaudRate need to the same!
 const parser = new Readline();
 
-io.set('origins', '*:*');
-http.listen(3000, "127.0.0.1");
+const wss = new WebSocket.Server({
+    host: '10.0.39.227',
+    port: 3000
+});
 
 serialPort.pipe(parser);
 
-io.on('connection', function (socket) {
-    socket.on('message', function (data) {
-        console.log(data);
-        serialPort.write(Buffer.from(JSON.parse(data), 'utf-8'));
+parser.on('data', line => {
+    console.log(line);
+});
+
+serialPort.on('error', function (err) {
+    console.log('Error: ', err.message)
+});
+
+
+wss.on('connection', function (ws) {
+    ws.on('message', function (message) {
+        console.log(message.length);
+        serialPort.write(message);
+        serialPort.drain();
     });
-    socket.on('disconnect', function () {});
 });
