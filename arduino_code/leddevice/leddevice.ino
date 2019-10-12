@@ -7,10 +7,10 @@
 #define N_LEDS 384
 #define BRIGHTNESS  50
 // https://gist.github.com/hsiboy/11545fd0241ab60b567d
-#define MAX_BRIGHTNESS 200      // Thats full on, watch the power!
+#define MAX_BRIGHTNESS 255      // Thats full on, watch the power!
 #define MIN_BRIGHTNESS 16       // set to a minimum of 25%
 const int brightnessInPin = A0;  // The Analog input pin that the brightness control potentiometer is attached to.
-#define LED_TYPE    WS2812  
+#define LED_TYPE    WS2812B
 #define COLOR_ORDER GRB
 CRGB leds[N_LEDS];
 #define UPDATES_PER_SECOND 24
@@ -35,7 +35,7 @@ void loop()
     // Show Matrix
     FastLED.show();
   // Needed?
-    delay(10);
+     delay(10);
   // Send OK for Info
      int mappedValue = map(analogRead(brightnessInPin), 0, 1023, 0, 255);
     //Serial.println(mappedValue);
@@ -44,5 +44,5 @@ void loop()
     Serial.println("OK");
   }
   delay(100);
-  Serial.println("OK");
+  Serial.println("NOK");
 }
