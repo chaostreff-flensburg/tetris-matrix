@@ -7,18 +7,14 @@
 
 let Engine = require('tetris-engine').Engine;
 let gamepad = require("gamepad");
-const SerialPort = require('serialport')
-const Readline = require('@serialport/parser-readline')
-//const port = new SerialPort('/dev/ttyACM1', { baudRate: 1000000}); // BaudRate need to the same!
-const port = new SerialPort('/dev/ttyUSB0', { baudRate: 1000000}); // BaudRate need to the same!
+const WebSocket = require('ws');
+const ws = new WebSocket('ws://10.0.40.210:81');
 const debug = true; // Want Timings for Debug?
 const co = false; // Want Console Tetris output ?
 // Game Field x y
 const areaHeight = 16;
 const areaWidth = 24;
 
-const parser = new Readline()
-port.pipe(parser)
 
 gamepad.init()
 // Color for Console
@@ -131,14 +127,8 @@ gamepad.on("down", function (id, num) {
 function done() {}
 
 // Change is ready?
-let change = false
-// Das hier war die Lösung für das Problem vom Aufhängen vom Arduino
-// Had long time search for this solution!
-parser.on('data', line => {
-	console.log(line);
-	change = false;
-});
-
+let change = false;
+let wsready = false;
 
 // https://github.com/petelinmn/tetris-engine
 let renderFunc = (gameState) => {
@@ -199,7 +189,12 @@ let renderFunc = (gameState) => {
 		clearInterval(moveleftint);
 	}
 	console.log(buf.length);
-	writeAndDrain(Buffer.from(buf), changer);
+	//writeAndDrain(Buffer.from(buf), changer);
+	// WS Testen
+	
+	if(wsready) 
+		ws.send(Buffer.from(buf))
+	changer();
 	heapcounter = hc;
 	/*if(gameState.statistic.countLinesReduced != 0 && gameState.statistic.countLinesReduced % 2 == 0)
 	{
@@ -211,15 +206,9 @@ let renderFunc = (gameState) => {
 	if(debug) {console.timeEnd("gameState");}
 };
 
-function writeAndDrain (data, callback) {
-	if(debug) {console.time("SerialWrite");}
-	port.write(data)
-	port.drain(callback)
-}
-
 function changer()
 {
-	if(debug) {console.timeEnd("SerialWrite");}
+	change = false;
 }
 
 // Color Mapping for the LED // Orange dont work really well :(
@@ -359,6 +348,11 @@ let game = new Engine(
 	//additionalShapes
 );
 
-setTimeout(() => {game.start();
-	gamelevel = setInterval(function() { game.moveDown(); }, firstLevelInterval);
-},3000);
+ws.on('open', function open() {
+	wsready = true;
+	game.start();
+	setTimeout(() => {
+		gamelevel = setInterval(function() { game.moveDown(); }, firstLevelInterval);
+	},200);
+});
+
